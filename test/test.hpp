@@ -50,7 +50,7 @@ template <typename _T> auto to_string(_T) -> std::string {
 
 }
 
-namespace icy {
+namespace test {
 
 struct subcase;
 struct subcase_signature;
@@ -272,7 +272,7 @@ auto result::get_exception_message() const -> std::string {
 }
 
 #define __ICY_REGISTER_CASE(f, label) \
-    ICY_CONSTEXPR(icy::testcase::enroll(&f, label, __FILE__, __LINE__))
+    ICY_CONSTEXPR(test::testcase::enroll(&f, label, __FILE__, __LINE__))
 
 #define __ICY_DECLARE_AND_REGISTER_CASE(f, label) \
     static void f(); \
@@ -283,13 +283,13 @@ auto result::get_exception_message() const -> std::string {
 #define __END while (false)
 
 #define __UNARY_ASSERT(assertion, type, ...) \
-    icy::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).unary_assert<type>(__VA_ARGS__)
+    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).unary_assert<type>(__VA_ARGS__)
 #define __BINARY_ASSERT(assertion, type, ...) \
-    icy::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).binary_assert<type>(__VA_ARGS__)
+    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).binary_assert<type>(__VA_ARGS__)
 #define __EXCEPTION_ASSERT(assertion, exception, ...) \
-    icy::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).exception_assert()
+    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).exception_assert()
 #define __NOEXCEPTION_ASSERT(assertion, exception, ...) \
-    icy::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).noexception_assert()
+    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).noexception_assert()
 
 #define __EXPECT_UNARY(assertion, type, ...) \
     __BEGIN { __UNARY_ASSERT(assertion, type, __VA_ARGS__); } __END
@@ -311,29 +311,29 @@ auto result::get_exception_message() const -> std::string {
     __ICY_DECLARE_AND_REGISTER_CASE(ICY_ANONYMOUS(ICY_ANONYMOUS_CASE_), label)
 
 #define ICY_SUBCASE(label) \
-    if (const icy::subcase& ICY_ANONYMOUS(ICY_ANONYMOUS_SUBCASE_) = icy::subcase(label, __FILE__, __LINE__))
+    if (const test::subcase& ICY_ANONYMOUS(ICY_ANONYMOUS_SUBCASE_) = test::subcase(label, __FILE__, __LINE__))
 
-#define EXPECT_TRUE(expression) __EXPECT_UNARY("EXPECT_TRUE", icy::TRUE, expression)
-#define EXPECT_FALSE(expression) __EXPECT_UNARY("EXPECT_FALSE", icy::FALSE, expression)
-#define EXPECT_EQ(x, y) __EXPECT_BINARY("EXPECT_EQ", icy::EQ, x, y)
-#define EXPECT_NE(x, y) __EXPECT_BINARY("EXPECT_NE", icy::NE, x, y)
-#define EXPECT_GT(x, y) __EXPECT_BINARY("EXPECT_GT", icy::GT, x, y)
-#define EXPECT_LT(x, y) __EXPECT_BINARY("EXPECT_LT", icy::LT, x, y)
-#define EXPECT_GE(x, y) __EXPECT_BINARY("EXPECT_GE", icy::GE, x, y)
-#define EXPECT_LE(x, y) __EXPECT_BINARY("EXPECT_LE", icy::LE, x, y)
+#define EXPECT_TRUE(expression) __EXPECT_UNARY("EXPECT_TRUE", test::TRUE, expression)
+#define EXPECT_FALSE(expression) __EXPECT_UNARY("EXPECT_FALSE", test::FALSE, expression)
+#define EXPECT_EQ(x, y) __EXPECT_BINARY("EXPECT_EQ", test::EQ, x, y)
+#define EXPECT_NE(x, y) __EXPECT_BINARY("EXPECT_NE", test::NE, x, y)
+#define EXPECT_GT(x, y) __EXPECT_BINARY("EXPECT_GT", test::GT, x, y)
+#define EXPECT_LT(x, y) __EXPECT_BINARY("EXPECT_LT", test::LT, x, y)
+#define EXPECT_GE(x, y) __EXPECT_BINARY("EXPECT_GE", test::GE, x, y)
+#define EXPECT_LE(x, y) __EXPECT_BINARY("EXPECT_LE", test::LE, x, y)
 #define EXPECT_NOTHROW(...) __EXPECT_NOTHROW("EXPECT_NOTHROW", __VA_ARGS__)
 #define EXPECT_THROW(exception, ...) __EXPECT_THROW("EXPECT_THROW", exception, __VA_ARGS__)
 
 int main(int _argc, char** _argv) {
-    for (const auto& _c : icy::testcase::cases()) {
-        icy::subcase::build();
+    for (const auto& _c : test::testcase::cases()) {
+        test::subcase::build();
         do {
-            icy::subcase::begin();
+            test::subcase::begin();
             _c.operator()();
-            icy::subcase::end();
-        } while (!icy::subcase::done());
+            test::subcase::end();
+        } while (!test::subcase::done());
     }
-    return icy::result::errors();
+    return test::result::errors();
 }
 
 #endif // _ICY_TESTING_FRAMEWORK_TEST_HPP_
