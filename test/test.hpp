@@ -25,6 +25,13 @@
 
 namespace {
 
+template <typename _T> auto to_string() -> std::string {
+    std::string _s = __PRETTY_FUNCTION__; // std::string {anonymous}::to_string() [with _T = A; std::string = std::__cxx11::basic_string<char>]
+    std::string::size_type _begin = _s.find('=') + 2;
+    std::string::size_type _end = _s.find(';');
+    return _s.substr(_begin, _end - _begin);
+}
+template <> auto to_string<void>() -> std::string { return ""; }
 auto to_string(bool _b) -> std::string { return _b ? "true" : "false"; }
 auto to_string(char _c) -> std::string {
     return std::string{'\'', _c, '\''};
@@ -42,10 +49,7 @@ template <> auto to_string<const char*>(const char* _s) -> std::string {
 }
 template <std::integral _T> auto to_string(_T _t) -> std::string { return std::to_string(_t); }
 template <typename _T> auto to_string(_T) -> std::string {
-    std::string _s = __PRETTY_FUNCTION__; // std::string {anonymous}::to_string(_T) [with _T = A; std::string = std::__cxx11::basic_string<char>]
-    std::string::size_type _begin = _s.find('=') + 2;
-    std::string::size_type _end = _s.find(';');
-    return _s.substr(_begin, _end - _begin);
+    return to_string<_T>();
 }
 
 }
@@ -143,11 +147,13 @@ public:
 public:
     template <binary_type _Ct, typename _L, typename _R> auto binary_assert(const _L&, const _R&) -> result&;
     template <unary_type _Ut, typename _T> auto unary_assert(const _T&) -> result&;
-    auto exception_assert() -> result&; // threw an exception
-    auto noexception_assert() -> result&; // not threw any exception
+    template <typename _Ex> auto exception_assert(const _Ex&) -> result&; // threw an exception
+    auto exception_failed() -> result&; // threw an exception
+    auto noexception_failed() -> result&; // not threw any exception
 public:
     static auto errors() -> size_t { return _errors; }
 private:
+    // auto get_exception_type() const -> std::string;
     auto get_exception_message() const -> std::string;
 private:
     std::string _file;
@@ -244,15 +250,26 @@ template <unary_type _Ut, typename _T> auto result::unary_assert(const _T& _t) -
     }
     return *this;
 }
-auto result::exception_assert() -> result& {
+template <typename _Ex> auto result::exception_assert(const _Ex& _e) -> result& {
+    const std::string& _msg = get_exception_message();
+    if (_exception_message != _msg) {
+        std::cout << _file << "(" << _line << ") FAILED!\n";
+        std::cout << "  " << _assertion << "(" << _expr << ")\n";
+        std::cout << "with expansion:\n";
+        std::cout << "  threw with (\"" << _msg << "\") expected (\"" << _exception_message << "\")" << std::endl;
+        ++_errors;
+    }
+    return *this;
+}
+auto result::exception_failed() -> result& {
     std::cout << _file << "(" << _line << ") FAILED!\n";
     std::cout << "  " << _assertion << "(" << _expr << ")\n";
     std::cout << "with expansion:\n";
-    std::cout << "  threw (" << get_exception_message() << ") expected (" << _exception_type << ")" << std::endl;
+    std::cout << "  threw (\"" << get_exception_message() << "\") expected (" << _exception_type << ")" << std::endl;
     ++_errors;
     return *this;
 }
-auto result::noexception_assert() -> result& {
+auto result::noexception_failed() -> result& {
     std::cout << _file << "(" << _line << ") FAILED!\n";
     std::cout << "  " << _assertion << "(" << _expr << ")\n";
     std::cout << "with expansion:\n";
@@ -260,6 +277,8 @@ auto result::noexception_assert() -> result& {
     ++_errors;
     return *this;
 }
+
+// auto result::get_exception_type() const -> std::string {}
 auto result::get_exception_message() const -> std::string {
     try { throw; }
     catch (const std::exception& _e) { return _e.what(); }
@@ -282,14 +301,22 @@ auto result::get_exception_message() const -> std::string {
 #define __BEGIN do
 #define __END while (false)
 
+// assert unary expression, may fail
 #define __UNARY_ASSERT(assertion, type, ...) \
     test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).unary_assert<type>(__VA_ARGS__)
+// assert binary expression, may fail
 #define __BINARY_ASSERT(assertion, type, ...) \
     test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).binary_assert<type>(__VA_ARGS__)
-#define __EXCEPTION_ASSERT(assertion, exception, ...) \
-    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).exception_assert()
-#define __NOEXCEPTION_ASSERT(assertion, exception, ...) \
-    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).noexception_assert()
+// assert exception expression, may fail
+#define __EXCEPTION_ASSERT(assertion, exception, message, e, ...) \
+    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception, message).exception_assert(e)
+
+// failed, exception handler
+#define __EXCEPTION_FAILED(assertion, exception, ...) \
+    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).exception_failed()
+// failed, noexception handler
+#define __NOEXCEPTION_FAILED(assertion, exception, ...) \
+    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).noexception_failed()
 
 #define __EXPECT_UNARY(assertion, type, ...) \
     __BEGIN { __UNARY_ASSERT(assertion, type, __VA_ARGS__); } __END
@@ -297,14 +324,21 @@ auto result::get_exception_message() const -> std::string {
     __BEGIN { __BINARY_ASSERT(assertion, type, __VA_ARGS__); } __END
 #define __EXPECT_NOTHROW(assertion, ...) \
     __BEGIN { \
-        try { __VA_ARGS__; } catch (...) \
-        { __EXCEPTION_ASSERT(assertion, , __VA_ARGS__); } \
+        try { __VA_ARGS__; } \
+        catch (...) { __EXCEPTION_FAILED(assertion, , __VA_ARGS__); } \
     } __END
 #define __EXPECT_THROW(assertion, exception, ...) \
     __BEGIN { \
-        try { __VA_ARGS__; } catch (const exception& e) { break; } catch (...) \
-        { __EXCEPTION_ASSERT(assertion, exception, __VA_ARGS__); } \
-        __NOEXCEPTION_ASSERT(assertion, exception, __VA_ARGS__); \
+        try { __VA_ARGS__; } catch (const exception& e) { break; } \
+        catch (...) { __EXCEPTION_FAILED(assertion, exception, __VA_ARGS__); } \
+        __NOEXCEPTION_FAILED(assertion, exception, __VA_ARGS__); \
+    } __END
+#define __EXPECT_THROW_WITH(assertion, exception, message, ...) \
+    __BEGIN { \
+        try { __VA_ARGS__; } catch (const exception& e) { \
+            __EXCEPTION_ASSERT(assertion, exception, message, e, __VA_ARGS__); break; \
+        } catch (...) { __EXCEPTION_FAILED(assertion, exception, __VA_ARGS__); } \
+        __NOEXCEPTION_FAILED(assertion, exception, __VA_ARGS__); \
     } __END
 
 #define ICY_CASE(label) \
@@ -323,6 +357,7 @@ auto result::get_exception_message() const -> std::string {
 #define EXPECT_LE(x, y) __EXPECT_BINARY("EXPECT_LE", test::LE, x, y)
 #define EXPECT_NOTHROW(...) __EXPECT_NOTHROW("EXPECT_NOTHROW", __VA_ARGS__)
 #define EXPECT_THROW(exception, ...) __EXPECT_THROW("EXPECT_THROW", exception, __VA_ARGS__)
+#define EXPECT_THROW_WITH(exception, message, ...) __EXPECT_THROW_WITH("EXPECT_THROW_WITH", exception, message, __VA_ARGS__)
 
 int main(int _argc, char** _argv) {
     for (const auto& _c : test::testcase::cases()) {
