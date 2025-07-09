@@ -6,6 +6,8 @@
 #include <queue>
 #include <stack>
 #include <vector>
+#include <concepts>
+#include <utility>
 #include <cassert>
 #include <iostream>
 
@@ -31,28 +33,67 @@ template <typename _T> auto to_string() -> std::string {
     std::string::size_type _end = _s.find(';');
     return _s.substr(_begin, _end - _begin);
 }
-template <> auto to_string<void>() -> std::string { return ""; }
 auto to_string(bool _b) -> std::string { return _b ? "true" : "false"; }
-auto to_string(char _c) -> std::string {
-    return std::string{'\'', _c, '\''};
+auto to_string(char _c) -> std::string { return std::string{'\'', _c, '\''}; }
+auto to_string(const char* _s) -> std::string { return "\"" + std::string(_s) + "\""; }
+auto to_string(std::nullptr_t) -> std::string { return "nullptr"; }
+auto to_string(const std::string& _s) -> std::string { return "\"" + _s + "\""; }
+template <> auto to_string<void>() -> std::string { return ""; }
+template <std::integral _T> auto to_string(const _T& _t) -> std::string { return std::to_string(_t); }
+template <std::floating_point _T> auto to_string(const _T& _t) -> std::string { return std::to_string(_t); }
+
+template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& _p) -> std::string;
+template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string;
+template <typename _T> auto to_string(const _T&) -> std::string;
+template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& _p) -> std::string {
+    return "(" + to_string(_p.first) + "," + to_string(_p.second) + ")";
 }
-template <typename _T> auto to_string(_T) -> std::string;
-template <> auto to_string<std::nullptr_t>(std::nullptr_t) -> std::string { return "nullptr"; }
-template <> auto to_string<std::string>(std::string _s) -> std::string {
-    _s.reserve(_s.size() + 2);
-    _s.insert(0, 1, '\"');
-    _s.push_back('\"');
+namespace {
+template <size_t _Index, typename _Tuple> struct from_tuple {
+    static void append(std::string& _s, const _Tuple& _t) {
+        from_tuple<_Index - 1, _Tuple>::append(_s, _t);
+        _s.push_back(',');
+        _s.append(to_string(std::get<_Index - 1>(_t)));
+    }
+};
+template <typename _Tuple> struct from_tuple<1, _Tuple> {
+    static void append(std::string& _s, const _Tuple& _t) {
+        _s.append(to_string(std::get<0>(_t)));
+    }
+};
+}
+template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string {
+    std::string _s("(");
+    from_tuple<sizeof...(_Ts), decltype(_t)>::append(_s, _t);
+    _s.push_back(')');
     return _s;
 }
-template <> auto to_string<const char*>(const char* _s) -> std::string {
-    return to_string(std::string(_s));
+template <typename _Begin, typename _End> concept iterable_range = requires (_Begin _b, _End _e) {
+    {++_b}; {*_b}; requires !std::is_void<decltype(*_b)>::value && std::is_same<_Begin, _End>::value; {_b != _e};
+};
+template <typename _T> concept iterable = std::is_array<_T>::value ||
+requires (const _T& _obj) {
+    {_obj.begin()}; {_obj.end()}; requires iterable_range<decltype(_obj.begin()), decltype(_obj.end())>;
+} ||
+requires (const _T& _obj) {
+    {std::begin(_obj)}; {std::end(_obj)}; requires iterable_range<decltype(_obj.begin()), decltype(_obj.end())>;
+};
+template <iterable _T> auto to_string(const _T& _t) -> std::string {
+    std::string _s("{");
+    for (auto _i = _t.begin(); ; _s.push_back(',')) {
+        _s += to_string(*_i);
+        if (++_i == _t.end()) { break; }
+    }
+    _s.push_back('}');
+    return _s;
 }
-template <std::integral _T> auto to_string(_T _t) -> std::string { return std::to_string(_t); }
-template <typename _T> auto to_string(_T) -> std::string {
+template <typename _T> auto to_string(const _T& _t) -> std::string {
     return to_string<_T>();
 }
 
 }
+
+#define ICY_STRINGIFY(x) to_string(x)
 
 namespace test {
 
@@ -235,7 +276,7 @@ template <binary_type _Ct, typename _L, typename _R> auto result::binary_assert(
         std::cout << _file << "(" << _line << ") FAILED!\n";
         std::cout << "  " << _assertion << "(" << _expr << ")\n";
         std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "(" << to_string(_lhs) << ", " << to_string(_rhs) << ")" << std::endl;
+        std::cout << "  " << _assertion << "(" << ICY_STRINGIFY(_lhs) << ", " << ICY_STRINGIFY(_rhs) << ")" << std::endl;
         ++_errors;
     }
     return *this;
@@ -245,7 +286,7 @@ template <unary_type _Ut, typename _T> auto result::unary_assert(const _T& _t) -
         std::cout << _file << "(" << _line << ") FAILED!\n";
         std::cout << "  " << _assertion << "(" << _expr << ")\n";
         std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "(" << to_string(_t) << ")" << std::endl;
+        std::cout << "  " << _assertion << "(" << ICY_STRINGIFY(_t) << ")" << std::endl;
         ++_errors;
     }
     return *this;
