@@ -3,14 +3,15 @@
 
 #include <string>
 #include <set>
-#include <queue>
-#include <stack>
 #include <vector>
 #include <concepts>
 #include <utility>
+#include <tuple>
 #include <cassert>
 #include <iostream>
 
+#define __ICY_STR(...) #__VA_ARGS__
+#define ICY_STR(...) __ICY_STR(__VA_ARGS__)
 #define __ICY_CAT(x, y) x##y
 #define ICY_CAT(x, y) __ICY_CAT(x, y)
 // #ifdef __COUNTER__
@@ -25,13 +26,13 @@
 #define ICY_CONSTEXPR(...) \
     const int ICY_ANONYMOUS(ICY_ANONYMOUS_VAR_) = __VA_ARGS__
 
-namespace {
+namespace test {
 
 template <typename _T> auto to_string() -> std::string {
     std::string _s = __PRETTY_FUNCTION__; // std::string {anonymous}::to_string() [with _T = A; std::string = std::__cxx11::basic_string<char>]
     std::string::size_type _begin = _s.find('=') + 2;
     std::string::size_type _end = _s.find(';');
-    return _s.substr(_begin, _end - _begin);
+    return _s.substr(_begin, _end - _begin).append("(...)");
 }
 auto to_string(bool _b) -> std::string { return _b ? "true" : "false"; }
 auto to_string(char _c) -> std::string { return std::string{'\'', _c, '\''}; }
@@ -49,14 +50,14 @@ template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& 
     return "(" + to_string(_p.first) + "," + to_string(_p.second) + ")";
 }
 namespace {
-template <size_t _Index, typename _Tuple> struct from_tuple {
+template <size_t _Index, typename _Tuple> struct tuple_stringify {
     static void append(std::string& _s, const _Tuple& _t) {
-        from_tuple<_Index - 1, _Tuple>::append(_s, _t);
+        tuple_stringify<_Index - 1, _Tuple>::append(_s, _t);
         _s.push_back(',');
         _s.append(to_string(std::get<_Index - 1>(_t)));
     }
 };
-template <typename _Tuple> struct from_tuple<1, _Tuple> {
+template <typename _Tuple> struct tuple_stringify<1, _Tuple> {
     static void append(std::string& _s, const _Tuple& _t) {
         _s.append(to_string(std::get<0>(_t)));
     }
@@ -64,8 +65,8 @@ template <typename _Tuple> struct from_tuple<1, _Tuple> {
 }
 template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string {
     std::string _s("(");
-    from_tuple<sizeof...(_Ts), decltype(_t)>::append(_s, _t);
-    _s.push_back(')');
+    tuple_stringify<sizeof...(_Ts), decltype(_t)>::append(_s, _t);
+    _s.append(")");
     return _s;
 }
 template <typename _Begin, typename _End> concept iterable_range = requires (_Begin _b, _End _e) {
@@ -84,18 +85,12 @@ template <iterable _T> auto to_string(const _T& _t) -> std::string {
         _s += to_string(*_i);
         if (++_i == _t.end()) { break; }
     }
-    _s.push_back('}');
+    _s.append("}");
     return _s;
 }
 template <typename _T> auto to_string(const _T& _t) -> std::string {
     return to_string<_T>();
 }
-
-}
-
-#define ICY_STRINGIFY(x) to_string(x)
-
-namespace test {
 
 struct subcase;
 struct subcase_signature;
@@ -276,7 +271,7 @@ template <binary_type _Ct, typename _L, typename _R> auto result::binary_assert(
         std::cout << _file << "(" << _line << ") FAILED!\n";
         std::cout << "  " << _assertion << "(" << _expr << ")\n";
         std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "(" << ICY_STRINGIFY(_lhs) << ", " << ICY_STRINGIFY(_rhs) << ")" << std::endl;
+        std::cout << "  " << _assertion << "(" << test::to_string(_lhs) << ", " << test::to_string(_rhs) << ")" << std::endl;
         ++_errors;
     }
     return *this;
@@ -286,7 +281,7 @@ template <unary_type _Ut, typename _T> auto result::unary_assert(const _T& _t) -
         std::cout << _file << "(" << _line << ") FAILED!\n";
         std::cout << "  " << _assertion << "(" << _expr << ")\n";
         std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "(" << ICY_STRINGIFY(_t) << ")" << std::endl;
+        std::cout << "  " << _assertion << "(" << test::to_string(_t) << ")" << std::endl;
         ++_errors;
     }
     return *this;
@@ -344,20 +339,20 @@ auto result::get_exception_message() const -> std::string {
 
 // assert unary expression, may fail
 #define __UNARY_ASSERT(assertion, type, ...) \
-    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).unary_assert<type>(__VA_ARGS__)
+    test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__)).unary_assert<type>(__VA_ARGS__)
 // assert binary expression, may fail
 #define __BINARY_ASSERT(assertion, type, ...) \
-    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__).binary_assert<type>(__VA_ARGS__)
+    test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__)).binary_assert<type>(__VA_ARGS__)
 // assert exception expression, may fail
 #define __EXCEPTION_ASSERT(assertion, exception, message, e, ...) \
-    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception, message).exception_assert(e)
+    test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__), ICY_STR(exception), message).exception_assert(e)
 
 // failed, exception handler
 #define __EXCEPTION_FAILED(assertion, exception, ...) \
-    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).exception_failed()
+    test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__), ICY_STR(exception)).exception_failed()
 // failed, noexception handler
 #define __NOEXCEPTION_FAILED(assertion, exception, ...) \
-    test::result(__FILE__, __LINE__, assertion, #__VA_ARGS__, #exception).noexception_failed()
+    test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__), ICY_STR(exception)).noexception_failed()
 
 #define __EXPECT_UNARY(assertion, type, ...) \
     __BEGIN { __UNARY_ASSERT(assertion, type, __VA_ARGS__); } __END
