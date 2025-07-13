@@ -23,8 +23,10 @@ ICY_CASE("basic") {
     EXPECT_EQ(test::to_string(nullptr), "nullptr");
     const char* _s = "hello";
     const std::string _str = "world";
+    const std::string _empty = "";
     EXPECT_EQ(test::to_string(_s), "\"hello\"");
     EXPECT_EQ(test::to_string(_str), "\"world\"");
+    EXPECT_EQ(test::to_string(_empty), "\"\"");
 }
 ICY_CASE("pair/tuple") {
     const std::pair<std::string, unsigned> _p {"string", 6};
@@ -43,6 +45,8 @@ ICY_CASE("range") {
     EXPECT_EQ(test::to_string(_v), "{0,2,4,6,8}");
     const std::list<char> _l {'x','y','z'};
     EXPECT_EQ(test::to_string(_l), "{\'x\',\'y\',\'z\'}");
+    const std::vector<char> _vc {};
+    EXPECT_EQ(test::to_string(_vc), "{}");
 }
 ICY_CASE("custom") {
     EXPECT_EQ(test::to_string(A()), "A(...)");

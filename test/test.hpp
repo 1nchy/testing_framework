@@ -81,7 +81,7 @@ requires (const _T& _obj) {
 };
 template <iterable _T> auto to_string(const _T& _t) -> std::string {
     std::string _s("{");
-    for (auto _i = _t.begin(); ; _s.push_back(',')) {
+    for (auto _i = _t.begin(); _i != _t.end(); _s.push_back(',')) {
         _s += to_string(*_i);
         if (++_i == _t.end()) { break; }
     }
