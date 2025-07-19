@@ -3,6 +3,10 @@
 #include <array>
 #include <vector>
 #include <list>
+#include <set>
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
 #include <string>
 #include <utility>
 #include <tuple>
@@ -11,6 +15,25 @@ struct A {};
 template <typename _T> struct B {};
 template <typename _T1, typename _T2> struct C {};
 template <typename... _Ts> struct D {};
+
+template <typename _T> struct E {
+public:
+    E(std::initializer_list<_T> _il) : _data(_il) {}
+    auto begin() const { return _data.begin(); }
+    auto end() const { return _data.end(); }
+private:
+    std::vector<_T> _data;
+};
+template <typename _T> struct F {
+public:
+    F(std::initializer_list<_T> _il) : _data(_il) {}
+    auto begin() const { return _data.begin(); }
+    auto end() const { return _data.end(); }
+    auto rbegin() const { return _data.rbegin(); }
+    auto rend() const { return _data.rend(); }
+private:
+    std::vector<_T> _data;
+};
 
 ICY_CASE("basic") {
     EXPECT_EQ(test::to_string(0), "0");
@@ -38,15 +61,43 @@ ICY_CASE("pair/tuple") {
     const std::tuple<std::pair<bool, unsigned>, int, char> _tp {{false, 2}, 3, 'd'};
     EXPECT_EQ(test::to_string(_tp), "((false,2),3,\'d\')");
 }
-ICY_CASE("range") {
+ICY_CASE("bidirectional") {
+    const unsigned _u[] = {2,3,5,7};
+    EXPECT_EQ(test::to_string(_u), "[2,3,5,7]");
     const std::array<int, 4> _a {1,-2,3,-4};
-    EXPECT_EQ(test::to_string(_a), "{1,-2,3,-4}");
+    EXPECT_EQ(test::to_string(_a), "[1,-2,3,-4]");
     const std::vector<unsigned> _v {0,2,4,6,8};
-    EXPECT_EQ(test::to_string(_v), "{0,2,4,6,8}");
+    EXPECT_EQ(test::to_string(_v), "[0,2,4,6,8]");
     const std::list<char> _l {'x','y','z'};
-    EXPECT_EQ(test::to_string(_l), "{\'x\',\'y\',\'z\'}");
+    EXPECT_EQ(test::to_string(_l), "[\'x\',\'y\',\'z\']");
     const std::vector<char> _vc {};
-    EXPECT_EQ(test::to_string(_vc), "{}");
+    EXPECT_EQ(test::to_string(_vc), "[]");
+    const std::set<unsigned> _s = {2,5,3,7};
+    EXPECT_EQ(test::to_string(_s), "[2,3,5,7]");
+    const std::map<unsigned, char> _m = {{2,'b'},{5,'e'},{3,'c'},{7,'g'}};
+    EXPECT_EQ(test::to_string(_m), "[(2,'b'),(3,'c'),(5,'e'),(7,'g')]");
+}
+ICY_CASE("forward") {
+    auto only_substr = [](const std::string& _src, const std::string& _x) -> bool {
+        const auto _first = _src.find_first_of(_x);
+        const auto _last = _src.find_last_of(_x);
+        return _first != std::string::npos && (_first + _last + 1, _src.size());
+    };
+    const std::unordered_set<unsigned> _s = {2,3,5,7};
+    const std::string _ss = test::to_string(_s);
+    EXPECT_TRUE(_ss.starts_with("{") && _ss.ends_with("}"));
+    EXPECT_TRUE(only_substr(_ss, "2"));
+    EXPECT_TRUE(only_substr(_ss, "3"));
+    EXPECT_TRUE(only_substr(_ss, "5"));
+    EXPECT_TRUE(only_substr(_ss, "7"));
+    const std::unordered_map<unsigned, char> _m = {{2,'b'},{5,'e'},{3,'c'},{7,'g'}};
+    EXPECT_EQ(test::to_string(_m), "{(7,'g'),(3,'c'),(5,'e'),(2,'b')}");
+    const std::string _ms = test::to_string(_m);
+    EXPECT_TRUE(_ms.starts_with("{") && _ms.ends_with("}"));
+    EXPECT_TRUE(only_substr(_ms, "(2,'b')"));
+    EXPECT_TRUE(only_substr(_ms, "(3,'c')"));
+    EXPECT_TRUE(only_substr(_ms, "(5,'e')"));
+    EXPECT_TRUE(only_substr(_ms, "(7,'g')"));
 }
 ICY_CASE("custom") {
     EXPECT_EQ(test::to_string(A()), "A(...)");
@@ -55,4 +106,8 @@ ICY_CASE("custom") {
     EXPECT_EQ(test::to_string(_c), "C<char, void>(...)");
     const auto _d = D<short,int,long,long long>();
     EXPECT_EQ(test::to_string(_d), "D<short int, int, long int, long long int>(...)");
+    const auto _e = E<unsigned>({2,3,5,7});
+    EXPECT_EQ(test::to_string(_e), "{2,3,5,7}");
+    const auto _f = F<unsigned>({2,3,5,7});
+    EXPECT_EQ(test::to_string(_f), "[2,3,5,7]");
 }

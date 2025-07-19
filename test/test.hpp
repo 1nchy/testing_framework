@@ -69,21 +69,40 @@ template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::
     _s.append(")");
     return _s;
 }
+namespace {
 template <typename _Begin, typename _End> concept iterable_range = requires (_Begin _b, _End _e) {
     {++_b}; {*_b}; requires !std::is_void<decltype(*_b)>::value && std::is_same<_Begin, _End>::value; {_b != _e};
 };
-template <typename _T> concept iterable = std::is_array<_T>::value ||
+template <typename _T> concept forward_iterable = !std::is_array<_T>::value &&
 requires (const _T& _obj) {
-    {_obj.begin()}; {_obj.end()}; requires iterable_range<decltype(_obj.begin()), decltype(_obj.end())>;
-} ||
-requires (const _T& _obj) {
-    {std::begin(_obj)}; {std::end(_obj)}; requires iterable_range<decltype(_obj.begin()), decltype(_obj.end())>;
+    {std::begin(_obj)}; {std::end(_obj)}; requires iterable_range<decltype(std::begin(_obj)), decltype(std::end(_obj))>;
+} && !requires (const _T& _obj) {
+    {std::rbegin(_obj)}; {std::rend(_obj)}; requires iterable_range<decltype(std::rbegin(_obj)), decltype(std::rend(_obj))>;
 };
-template <iterable _T> auto to_string(const _T& _t) -> std::string {
-    std::string _s("{");
-    for (auto _i = _t.begin(); _i != _t.end(); _s.push_back(',')) {
+template <typename _T> concept bidirectional_iterable = std::is_array<_T>::value || (
+    requires (const _T& _obj) {
+        {std::begin(_obj)}; {std::end(_obj)}; requires iterable_range<decltype(std::begin(_obj)), decltype(std::end(_obj))>;
+    }
+) && (
+    requires (const _T& _obj) {
+        {std::rbegin(_obj)}; {std::rend(_obj)}; requires iterable_range<decltype(std::rbegin(_obj)), decltype(std::rend(_obj))>;
+    }
+);
+}
+template <bidirectional_iterable _T> auto to_string(const _T& _t) -> std::string {
+    std::string _s("[");
+    for (auto _i = std::begin(_t); _i != std::end(_t); _s.push_back(',')) {
         _s += to_string(*_i);
-        if (++_i == _t.end()) { break; }
+        if (++_i == std::end(_t)) { break; }
+    }
+    _s.append("]");
+    return _s;
+}
+template <forward_iterable _T> auto to_string(const _T& _t) -> std::string {
+    std::string _s("{");
+    for (auto _i = std::begin(_t); _i != std::end(_t); _s.push_back(',')) {
+        _s += to_string(*_i);
+        if (++_i == std::end(_t)) { break; }
     }
     _s.append("}");
     return _s;
