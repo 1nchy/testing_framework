@@ -162,7 +162,7 @@ public:
     testcase(function_type, const char*, const char*, unsigned);
     testcase(const testcase&) = default;
     testcase(testcase&&) = delete;
-    testcase& operator=(const testcase&) = default;
+    testcase& operator=(const testcase&) = delete;
     testcase& operator=(testcase&&) = delete;
     ~testcase() = default;
     auto operator<(const testcase&) const -> bool;
