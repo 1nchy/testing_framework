@@ -23,7 +23,7 @@
 #define ICY_ATTRIBUTE_CONSTRUCTOR __attribute__((constructor))
 #define ICY_ATTRIBUTE_DESTRUCTOR __attribute__((destructor))
 
-#define ICY_CONSTEXPR(...) \
+#define GLOBAL_EVAL(...) \
     const int ICY_ANONYMOUS(ICY_ANONYMOUS_VAR_) = __VA_ARGS__
 
 namespace test {
@@ -346,7 +346,7 @@ auto result::get_exception_message() const -> std::string {
 }
 
 #define __ICY_REGISTER_CASE(f, label) \
-    ICY_CONSTEXPR(test::testcase::enroll(&f, label, __FILE__, __LINE__))
+    GLOBAL_EVAL(test::testcase::enroll(&f, label, __FILE__, __LINE__))
 
 #define __ICY_DECLARE_AND_REGISTER_CASE(f, label) \
     static void f(); \
@@ -401,6 +401,8 @@ auto result::get_exception_message() const -> std::string {
 
 #define ICY_SUBCASE(label) \
     if (const test::subcase& ICY_ANONYMOUS(ICY_ANONYMOUS_SUBCASE_) = test::subcase(label, __FILE__, __LINE__))
+
+#define ICY_SEQCASE(label)
 
 #define EXPECT_TRUE(expression) __EXPECT_UNARY("EXPECT_TRUE", test::TRUE, expression)
 #define EXPECT_FALSE(expression) __EXPECT_UNARY("EXPECT_FALSE", test::FALSE, expression)
