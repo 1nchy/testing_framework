@@ -20,5 +20,5 @@ macro(icy_add_test case_name)
 endmacro(icy_add_test)
 
 icy_add_test(graph)
-# icy_add_test(assertion)
+icy_add_test(assertion)
 icy_add_test(stringify)
