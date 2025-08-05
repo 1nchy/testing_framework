@@ -82,7 +82,7 @@ template <typename _T> auto to_string() -> std::string {
     std::string::size_type _begin = _s.find("to_string") + 10;
     std::string::size_type _end = _s.size() - 7;
     _s = _s.substr(_begin, _end - _begin);
-    for (const auto* _word : keywords) {
+    for (const auto& _word : keywords) {
         if (_s.starts_with(_word)) {
             _s = _s.substr(_word.size() + 1);
             break;
