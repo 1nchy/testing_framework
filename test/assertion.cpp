@@ -70,7 +70,7 @@ ICY_CASE("success") {
         EXPECT_EQUALS(integer(3), 3u, 3l, integer(3), integer(3));
     }
     ICY_SEQCASE("THROW") {
-        EXPECT_THROW(std::out_of_range, v.at(5) == 1);
+        EXPECT_THROW(std::out_of_range, void(v.at(5) == 1));
     }
     ICY_SEQCASE("THROW_WITH") {
         EXPECT_THROW_WITH(json_exception, "VALUE EXPECTED",
@@ -78,7 +78,7 @@ ICY_CASE("success") {
         );
     }
     ICY_SEQCASE("NOTHROW") {
-        EXPECT_NOTHROW(v.at(2) == 1);
+        EXPECT_NOTHROW(void(v.at(2) == 1));
     }
     EXPECT_EQ(test::result::errors(), 0);
 }
@@ -106,7 +106,7 @@ ICY_CASE("failed") {
         EXPECT_EQUALS(integer(3), 2u, 3l, integer(3), integer(2));
     }
     ICY_SEQCASE("THROW") {
-        EXPECT_THROW(std::out_of_range, v.at(2) == 1);
+        EXPECT_THROW(std::out_of_range, void(v.at(2) == 1));
     }
     ICY_SEQCASE("THROW_WITH") {
         EXPECT_THROW_WITH(json_exception, "COMMA EXPECTED",
@@ -114,7 +114,7 @@ ICY_CASE("failed") {
         );
     }
     ICY_SEQCASE("NOTHROW") {
-        EXPECT_NOTHROW(v.at(5) == 1);
+        EXPECT_NOTHROW(void(v.at(5) == 1));
     }
     if (test::result::errors() == 24) {
         test::result::reset_errors();

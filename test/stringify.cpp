@@ -79,9 +79,9 @@ ICY_CASE("bidirectional") {
 }
 ICY_CASE("forward") {
     auto only_substr = [](const std::string& _src, const std::string& _x) -> bool {
-        const auto _first = _src.find_first_of(_x);
-        const auto _last = _src.find_last_of(_x);
-        return _first != std::string::npos && (_first + _last + 1, _src.size());
+        const auto _first = _src.find(_x);
+        const auto _last = _src.rfind(_x);
+        return (_first != std::string::npos) && (_first == _last);
     };
     const std::unordered_set<unsigned> _s = {2,3,5,7};
     const std::string _ss = test::to_string(_s);
@@ -91,7 +91,6 @@ ICY_CASE("forward") {
     EXPECT_TRUE(only_substr(_ss, "5"));
     EXPECT_TRUE(only_substr(_ss, "7"));
     const std::unordered_map<unsigned, char> _m = {{2,'b'},{5,'e'},{3,'c'},{7,'g'}};
-    EXPECT_EQ(test::to_string(_m), "{(7,'g'),(3,'c'),(5,'e'),(2,'b')}");
     const std::string _ms = test::to_string(_m);
     EXPECT_TRUE(_ms.starts_with("{") && _ms.ends_with("}"));
     EXPECT_TRUE(only_substr(_ms, "(2,'b')"));
@@ -104,10 +103,24 @@ ICY_CASE("custom") {
     EXPECT_EQ(test::to_string(B<int>()), "B<int>(...)");
     const auto _c = C<char, void>();
     EXPECT_EQ(test::to_string(_c), "C<char, void>(...)");
-    const auto _d = D<short,int,long,long long>();
-    EXPECT_EQ(test::to_string(_d), "D<short int, int, long int, long long int>(...)");
+    const auto _d = D<int,float,A>();
+    EXPECT_EQ(test::to_string(_d), "D<int, float, A>(...)");
     const auto _e = E<unsigned>({2,3,5,7});
     EXPECT_EQ(test::to_string(_e), "{2,3,5,7}");
     const auto _f = F<unsigned>({2,3,5,7});
     EXPECT_EQ(test::to_string(_f), "[2,3,5,7]");
+}
+ICY_CASE("arguments") {
+    const auto _x = std::vector<int>{1,2,3};
+    const auto _y = std::string("hello");
+    const auto _z = std::make_tuple(0u, 0);
+    EXPECT_EQ(test::to_string<test::NONE>(_x, _y, _z), "[1,2,3],\"hello\",(0,0)");
+}
+ICY_CASE("combination") {
+    const auto _x = std::vector<int>{1,2,3};
+    const auto _y = std::string("hello");
+    const auto _z = std::make_tuple(0u, 0);
+    EXPECT_EQ(test::to_string(std::make_tuple(_x, _y, _z)), "([1,2,3],\"hello\",(0,0))");
+    EXPECT_EQ(test::to_string(std::vector<std::remove_const<decltype(_x)>::type>{_x,_x}), "[[1,2,3],[1,2,3]]");
+    EXPECT_EQ(test::to_string(std::vector<std::remove_const<decltype(_z)>::type>{_z,_z}), "[(0,0),(0,0)]");
 }

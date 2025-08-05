@@ -28,48 +28,20 @@
 
 namespace test {
 
-template <typename _T> auto to_string() -> std::string {
-    // std::string {anonymous}::to_string() [with _T = A; std::string = std::__cxx11::basic_string<char>]
-    std::string _s = __PRETTY_FUNCTION__;
-    std::string::size_type _begin = _s.find('=') + 2;
-    std::string::size_type _end = _s.find(';');
-    return _s.substr(_begin, _end - _begin).append("(...)");
-}
-auto to_string(bool _b) -> std::string { return _b ? "true" : "false"; }
-auto to_string(char _c) -> std::string { return std::string{'\'', _c, '\''}; }
-auto to_string(const char* _s) -> std::string { return "\"" + std::string(_s) + "\""; }
-auto to_string(std::nullptr_t) -> std::string { return "nullptr"; }
-auto to_string(const std::string& _s) -> std::string { return "\"" + _s + "\""; }
-template <> auto to_string<void>() -> std::string { return ""; }
-template <std::integral _T> auto to_string(const _T& _t) -> std::string { return std::to_string(_t); }
-template <std::floating_point _T> auto to_string(const _T& _t) -> std::string { return std::to_string(_t); }
+enum bracket : unsigned { PARENTHESES, SQUARE, CURLY, ANGLE, NONE };
+constexpr std::pair<char, char> brackets[bracket::NONE] = {{'(', ')'}, {'[', ']'}, {'{', '}'}, {'<', '>'}};
+#if defined(_MSC_VER)
+constexpr std::string keywords[] = {"class", "struct", "enum", "union"};
+#endif
 
-template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& _p) -> std::string;
-template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string;
-template <typename _T> auto to_string(const _T&) -> std::string;
-template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& _p) -> std::string {
-    return "(" + to_string(_p.first) + "," + to_string(_p.second) + ")";
-}
-namespace {
-template <size_t _Index, typename _Tuple> struct tuple_stringify {
-    static void append(std::string& _s, const _Tuple& _t) {
-        tuple_stringify<_Index - 1, _Tuple>::append(_s, _t);
-        _s.push_back(',');
-        _s.append(to_string(std::get<_Index - 1>(_t)));
-    }
-};
-template <typename _Tuple> struct tuple_stringify<1, _Tuple> {
-    static void append(std::string& _s, const _Tuple& _t) {
-        _s.append(to_string(std::get<0>(_t)));
-    }
+namespace __details__ {
+struct arguments_stringify;
+struct arguments_stringify {
+    template <typename _T, typename... _Ts> static auto append(std::string&, _T&&, _Ts&&...) -> void;
+    static auto append(std::string&) -> void;
 };
 }
-template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string {
-    std::string _s("(");
-    tuple_stringify<sizeof...(_Ts), decltype(_t)>::append(_s, _t);
-    _s.append(")");
-    return _s;
-}
+
 namespace {
 template <typename _Begin, typename _End> concept iterable_range = requires (_Begin _b, _End _e) {
     {++_b}; {*_b}; requires !std::is_void<decltype(*_b)>::value && std::is_same<_Begin, _End>::value; {_b != _e};
@@ -94,6 +66,53 @@ template <typename _T> concept bidirectional_iterable = std::is_array<_T>::value
     }
 );
 }
+
+template <typename _T> auto to_string() -> std::string {
+    // GCC 9.2.0 // std::string test::to_string() [with _T = A; std::string = std::__cxx11::basic_string]
+    // GCC 8.3.0 // std::__cxx11::string test::to_string() [with _T = A; std::__cxx11::string = std::__cxx11::basic_string]
+    // CLANG 7.0.1 // std::string to_string() [_T = A]
+#if defined(_MSC_VER)
+    std::string _s = __FUNCSIG__;
+#elif defined(__clang__) || defined(__GNUC__)
+    std::string _s = __PRETTY_FUNCTION__;
+#else
+    static_assert(false, "unknown compiler");
+#endif
+#if defined(_MSC_VER) // class std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> > __cdecl to_string<class A>(void)
+    std::string::size_type _begin = _s.find("to_string") + 10;
+    std::string::size_type _end = _s.size() - 7;
+    _s = _s.substr(_begin, _end - _begin);
+    for (const auto* _word : keywords) {
+        if (_s.starts_with(_word)) {
+            _s = _s.substr(_word.size() + 1);
+            break;
+        }
+    }
+#elif defined(__clang__) // std::string to_string() [_T = A]
+    std::string::size_type _begin = _s.find('=') + 2;
+    std::string::size_type _end = _s.size() - 1;
+    _s = _s.substr(_begin, _end - _begin);
+#elif defined(__GNUC__) // std::string to_string() [with _T = A; std::string = std::__cxx11::basic_string]
+    std::string::size_type _begin = _s.find('=') + 2;
+    std::string::size_type _end = _s.find(';');
+    _s = _s.substr(_begin, _end - _begin);
+#else
+    static_assert(false);
+#endif
+    return _s.append("(...)");
+}
+auto to_string(bool _b) -> std::string { return _b ? "true" : "false"; }
+auto to_string(char _c) -> std::string { return std::string{'\'', _c, '\''}; }
+auto to_string(const char* _s) -> std::string { return "\"" + std::string(_s) + "\""; }
+auto to_string(std::nullptr_t) -> std::string { return "nullptr"; }
+auto to_string(const std::string& _s) -> std::string { return "\"" + _s + "\""; }
+template <> auto to_string<void>() -> std::string { return ""; }
+template <std::integral _T> auto to_string(const _T& _t) -> std::string { return std::to_string(_t); }
+template <std::floating_point _T> auto to_string(const _T& _t) -> std::string { return std::to_string(_t); }
+template <bracket _B, typename... _Args> auto to_string(_Args&&... _args) -> std::string;
+template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& _p) -> std::string;
+template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string;
+template <typename _T> auto to_string(const _T&) -> std::string;
 template <bidirectional_iterable _T> auto to_string(const _T& _t) -> std::string {
     std::string _s("[");
     for (auto _i = std::begin(_t); _i != std::end(_t); _s.push_back(',')) {
@@ -112,8 +131,36 @@ template <forward_iterable _T> auto to_string(const _T& _t) -> std::string {
     _s.append("}");
     return _s;
 }
+template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& _p) -> std::string {
+    return test::to_string<PARENTHESES>(_p.first, _p.second);
+}
+namespace {
+template <size_t... _N, typename... _Ts> auto tuple_to_string(std::index_sequence<_N...>, const std::tuple<_Ts...>& _t) -> std::string {
+    return test::to_string<PARENTHESES>(std::get<_N>(_t)...);
+};
+}
+template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string {
+    return tuple_to_string(std::make_index_sequence<sizeof...(_Ts)>{}, _t);
+}
+template <bracket _B, typename... _Args> auto to_string(_Args&&... _args) -> std::string {
+    std::string _s;
+    if constexpr (_B != bracket::NONE) { _s.push_back(brackets[_B].first); }
+    __details__::arguments_stringify::append(_s, std::forward<_Args>(_args)...);
+    if constexpr (_B != bracket::NONE) { _s.push_back(brackets[_B].second); }
+    return _s;
+};
+
 template <typename _T> auto to_string(const _T& _t) -> std::string {
     return to_string<_T>();
+}
+
+namespace __details__ {
+template <typename _T, typename... _Ts> auto arguments_stringify::append(std::string& _s, _T&& _t, _Ts&&... _ts) -> void {
+    _s.append(to_string(std::forward<_T>(_t)));
+    if (sizeof...(_Ts) != 0) { _s.push_back(','); }
+    arguments_stringify::append(_s, std::forward<_Ts>(_ts)...);
+}
+auto arguments_stringify::append(std::string& _s) -> void {}
 }
 
 struct subcase;
@@ -217,7 +264,10 @@ public:
 public:
     template <unary_type _Ut, typename _T> auto unary_assert(const _T&) -> result&;
     template <binary_type _Bt, typename _L, typename _R> auto binary_assert(const _L&, const _R&) -> result&;
-    template <binary_type _Bt, typename... _Args> auto sequence_assert(_Args&&... _args) -> result&;
+    template <binary_type _Bt, size_t _I, typename _L, typename _R>
+    auto sequence_assert(const _L&, const _R&) -> result&;
+    template <binary_type _Bt, size_t _I, typename _L, typename _R, typename... _Args>
+    auto sequence_assert(const _L&, const _R&, _Args&&... _args) -> result&;
     template <typename _Ex> auto exception_assert(const _Ex&) -> result&; // threw an exception
     auto exception_failed() -> result&; // threw an exception
     auto noexception_failed() -> result&; // not threw any exception
@@ -227,11 +277,7 @@ public:
 private:
     // auto get_exception_type() const -> std::string;
     auto get_exception_message() const -> std::string;
-private:
-    template <binary_type _Bt, size_t _I, typename _L, typename _R>
-    auto _M_sequence_assert(const _L&, const _R&) -> result&;
-    template <binary_type _Bt, size_t _I, typename _L, typename _R, typename... _Args>
-    auto _M_sequence_assert(const _L&, const _R&, _Args&&... _args) -> result&;
+    auto report() const -> void;
 private:
     std::string _file;
     unsigned _line;
@@ -311,52 +357,55 @@ _file(_file), _line(_line), _assertion(_assertion), _expr(_expr),
 _exception_type(_exception_type), _exception_message(_exception_message) {}
 template <unary_type _Ut, typename _T> auto result::unary_assert(const _T& _t) -> result& {
     if (!unary<_Ut, _T>()(_t)) {
-        std::cout << _file << "(" << _line << ") FAILED!\n";
-        std::cout << "  " << _assertion << "(" << _expr << ")\n";
-        std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "(" << test::to_string(_t) << ")" << std::endl;
+        report();
+        std::cout << "  " << _assertion << test::to_string<PARENTHESES>(_t) << std::endl;
         ++_errors;
     }
     return *this;
 }
 template <binary_type _Bt, typename _L, typename _R> auto result::binary_assert(const _L& _lhs, const _R& _rhs) -> result& {
     if (!binary<_Bt, _L, _R>()(_lhs, _rhs)) {
-        std::cout << _file << "(" << _line << ") FAILED!\n";
-        std::cout << "  " << _assertion << "(" << _expr << ")\n";
-        std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "(" << test::to_string(_lhs) << ", " << test::to_string(_rhs) << ")" << std::endl;
+        report();
+        std::cout << "  " << _assertion << test::to_string<PARENTHESES>(_lhs, _rhs) << std::endl;
         ++_errors;
     }
     return *this;
 }
-template <binary_type _Bt, typename... _Args> auto result::sequence_assert(_Args&&... _args) -> result& {
-    static_assert(sizeof...(_Args) >= 2);
-    return _M_sequence_assert<_Bt, 0>(std::forward<_Args>(_args)...);
+template <binary_type _Bt, size_t _I, typename _L, typename _R> auto result::sequence_assert(const _L& _lhs, const _R& _rhs) -> result& {
+    if (!binary<_Bt, _L, _R>()(_lhs, _rhs)) {
+        report();
+        std::cout << "  " << _assertion << test::to_string<CURLY>(_I, _I + 1) << test::to_string<PARENTHESES>(_lhs, _rhs) << std::endl;
+        ++_errors;
+    }
+    return *this;
+}
+template <binary_type _Bt, size_t _I, typename _L, typename _R, typename... _Args> auto
+result::sequence_assert(const _L& _lhs, const _R& _rhs, _Args&&... _args) -> result& {
+    if (!binary<_Bt, _L, _R>()(_lhs, _rhs)) {
+        report();
+        std::cout << "  " << _assertion << test::to_string<CURLY>(_I, _I + 1) << test::to_string<PARENTHESES>(_lhs, _rhs) << std::endl;
+        ++_errors;
+    }
+    return sequence_assert<_Bt, _I + 1>(_rhs, std::forward<_Args>(_args)...);
 }
 template <typename _Ex> auto result::exception_assert(const _Ex& _e) -> result& {
     const std::string& _msg = get_exception_message();
     if (_exception_message != _msg) {
-        std::cout << _file << "(" << _line << ") FAILED!\n";
-        std::cout << "  " << _assertion << "(" << _expr << ")\n";
-        std::cout << "with expansion:\n";
-        std::cout << "  threw with (\"" << _msg << "\") expected (\"" << _exception_message << "\")" << std::endl;
+        report();
+        std::cout << "  threw with " << test::to_string<PARENTHESES>(_msg) << " expected " << test::to_string<PARENTHESES>(_exception_message) << std::endl;
         ++_errors;
     }
     return *this;
 }
 auto result::exception_failed() -> result& {
-    std::cout << _file << "(" << _line << ") FAILED!\n";
-    std::cout << "  " << _assertion << "(" << _expr << ")\n";
-    std::cout << "with expansion:\n";
-    std::cout << "  threw (\"" << get_exception_message() << "\") expected (" << _exception_type << ")" << std::endl;
+    report();
+    std::cout << "  threw " << test::to_string<PARENTHESES>(get_exception_message()) << " expected " << test::to_string<PARENTHESES>(_exception_type) << std::endl;
     ++_errors;
     return *this;
 }
 auto result::noexception_failed() -> result& {
-    std::cout << _file << "(" << _line << ") FAILED!\n";
-    std::cout << "  " << _assertion << "(" << _expr << ")\n";
-    std::cout << "with expansion:\n";
-    std::cout << "  threw (" << ") expected (" << _exception_type << ")" << std::endl;
+    report();
+    std::cout << "  threw " << test::to_string<PARENTHESES>() << " expected " << test::to_string<PARENTHESES>(_exception_type) << std::endl;
     ++_errors;
     return *this;
 }
@@ -370,28 +419,9 @@ auto result::get_exception_message() const -> std::string {
     catch (...) { return "unknown exception"; }
     return "";
 }
-template <binary_type _Bt, size_t _I, typename _L, typename _R> auto result::_M_sequence_assert(const _L& _lhs, const _R& _rhs) -> result& {
-    if (!binary<_Bt, _L, _R>()(_lhs, _rhs)) {
-        std::cout << _file << "(" << _line << ") FAILED!\n";
-        std::cout << "  " << _assertion << "(" << _expr << ")\n";
-        std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "<" << _I << ", " << _I + 1 << ">";
-        std::cout << "(" << test::to_string(_lhs) << ", " << test::to_string(_rhs) << ")" << std::endl;
-        ++_errors;
-    }
-    return *this;
-}
-template <binary_type _Bt, size_t _I, typename _L, typename _R, typename... _Args> auto
-result::_M_sequence_assert(const _L& _lhs, const _R& _rhs, _Args&&... _args) -> result& {
-    if (!binary<_Bt, _L, _R>()(_lhs, _rhs)) {
-        std::cout << _file << "(" << _line << ") FAILED!\n";
-        std::cout << "  " << _assertion << "(" << _expr << ")\n";
-        std::cout << "with expansion:\n";
-        std::cout << "  " << _assertion << "<" << _I << ", " << _I + 1 << ">";
-        std::cout << "(" << test::to_string(_lhs) << ", " << test::to_string(_rhs) << ")" << std::endl;
-        ++_errors;
-    }
-    return _M_sequence_assert<_Bt, _I + 1>(_rhs, std::forward<_Args>(_args)...);
+auto result::report() const -> void {
+    std::cout << _file << '(' << _line << ')' << ' ' << "FAILED!" << '\n';
+    std::cout << "  " << _assertion << '(' << _expr << ')' << std::endl;
 }
 
 }
@@ -415,7 +445,7 @@ result::_M_sequence_assert(const _L& _lhs, const _R& _rhs, _Args&&... _args) -> 
     test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__)).binary_assert<type>(__VA_ARGS__)
 // assert sequence expression, may fail
 #define __SEQUENCE_ASSERT(assertion, type, ...) \
-    test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__)).sequence_assert<type>(__VA_ARGS__)
+    test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__)).sequence_assert<type, 0>(__VA_ARGS__)
 // assert exception expression, may fail
 #define __EXCEPTION_ASSERT(assertion, exception, message, e, ...) \
     test::result(__FILE__, __LINE__, assertion, ICY_STR(__VA_ARGS__), ICY_STR(exception), message).exception_assert(e)
