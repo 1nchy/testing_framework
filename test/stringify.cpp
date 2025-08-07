@@ -44,6 +44,7 @@ ICY_CASE("basic") {
     EXPECT_EQ(test::to_string(true), "true");
     EXPECT_EQ(test::to_string(false), "false");
     EXPECT_EQ(test::to_string(nullptr), "nullptr");
+    EXPECT_EQ(test::to_string(), "");
     const char* _s = "hello";
     const std::string _str = "world";
     const std::string _empty = "";
@@ -64,6 +65,11 @@ ICY_CASE("pair/tuple") {
 ICY_CASE("bidirectional") {
     const unsigned _u[] = {2,3,5,7};
     EXPECT_EQ(test::to_string(_u), "[2,3,5,7]");
+    const unsigned _matrix[][3] = {{1,2,3},{4,5,6}};
+    EXPECT_EQ(test::to_string(_matrix), "[[1,2,3],[4,5,6]]");
+    const char* _words[] = {"hello", "world"};
+    EXPECT_EQ(test::to_string(_words), "[\"hello\",\"world\"]");
+    EXPECT_EQ(test::to_string(_matrix), "[[1,2,3],[4,5,6]]");
     const std::array<int, 4> _a {1,-2,3,-4};
     EXPECT_EQ(test::to_string(_a), "[1,-2,3,-4]");
     const std::vector<unsigned> _v {0,2,4,6,8};
@@ -117,10 +123,15 @@ ICY_CASE("arguments") {
     EXPECT_EQ(test::to_string<test::NONE>(_x, _y, _z), "[1,2,3],\"hello\",(0,0)");
 }
 ICY_CASE("combination") {
-    const auto _x = std::vector<int>{1,2,3};
+    const auto _w = E<int>{3,2,1};
+    const auto _x = F<int>{1,2,3};
     const auto _y = std::string("hello");
     const auto _z = std::make_tuple(0u, 0);
     EXPECT_EQ(test::to_string(std::make_tuple(_x, _y, _z)), "([1,2,3],\"hello\",(0,0))");
     EXPECT_EQ(test::to_string(std::vector<std::remove_const<decltype(_x)>::type>{_x,_x}), "[[1,2,3],[1,2,3]]");
     EXPECT_EQ(test::to_string(std::vector<std::remove_const<decltype(_z)>::type>{_z,_z}), "[(0,0),(0,0)]");
+    const auto _e = E({_x, _x});
+    EXPECT_EQ(test::to_string(_e), "{[1,2,3],[1,2,3]}");
+    const auto _f = F({_w, _w});
+    EXPECT_EQ(test::to_string(_f), "[{3,2,1},{3,2,1}]");
 }

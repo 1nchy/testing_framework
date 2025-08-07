@@ -67,7 +67,7 @@ template <typename _T> concept bidirectional_iterable = std::is_array<_T>::value
 );
 }
 
-template <typename _T> auto to_string() -> std::string {
+template <typename _T = void> auto to_string() -> std::string {
     // GCC 9.2.0 // std::string test::to_string() [with _T = A; std::string = std::__cxx11::basic_string]
     // GCC 8.3.0 // std::__cxx11::string test::to_string() [with _T = A; std::__cxx11::string = std::__cxx11::basic_string]
     // CLANG 7.0.1 // std::string to_string() [_T = A]
@@ -112,6 +112,8 @@ template <std::floating_point _T> auto to_string(const _T& _t) -> std::string { 
 template <bracket _B, typename... _Args> auto to_string(_Args&&... _args) -> std::string;
 template <typename _K1, typename _K2> auto to_string(const std::pair<_K1, _K2>& _p) -> std::string;
 template <typename... _Ts> auto to_string(const std::tuple<_Ts...>& _t) -> std::string;
+template <bidirectional_iterable _T> auto to_string(const _T& _t) -> std::string;
+template <forward_iterable _T> auto to_string(const _T& _t) -> std::string;
 template <typename _T> auto to_string(const _T&) -> std::string;
 template <bidirectional_iterable _T> auto to_string(const _T& _t) -> std::string {
     std::string _s("[");
