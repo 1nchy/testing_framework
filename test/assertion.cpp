@@ -80,7 +80,7 @@ ICY_CASE("success") {
     ICY_SEQCASE("NOTHROW") {
         EXPECT_NOTHROW(void(v.at(2) == 1));
     }
-    EXPECT_EQ(test::result::errors(), 0);
+    REQUIRE_EQ(test::result::errors(), 0);
 }
 ICY_CASE("failed") {
     ICY_SEQCASE("UNARY") {
@@ -116,7 +116,6 @@ ICY_CASE("failed") {
     ICY_SEQCASE("NOTHROW") {
         EXPECT_NOTHROW(void(v.at(5) == 1));
     }
-    if (test::result::errors() == 24) {
-        test::result::reset_errors();
-    }
+    REQUIRE_EQ(test::result::errors(), 24);
+    test::result::reset_errors();
 }
