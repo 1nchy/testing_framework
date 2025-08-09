@@ -376,7 +376,7 @@ template <binary_type _Bt, typename _L, typename _R> auto result::binary_assert(
 template <binary_type _Bt, size_t _I, typename _L, typename _R> auto result::sequence_assert(const _L& _lhs, const _R& _rhs) -> result& {
     if (!binary<_Bt, _L, _R>()(_lhs, _rhs)) {
         report();
-        std::cout << "  " << _assertion << test::to_string<CURLY>(_I, _I + 1) << test::to_string<PARENTHESES>(_lhs, _rhs) << std::endl;
+        std::cout << "  " << _assertion << test::to_string<ANGLE>(_I, _I + 1) << test::to_string<PARENTHESES>(_lhs, _rhs) << std::endl;
         ++_errors;
     }
     return *this;
@@ -385,7 +385,7 @@ template <binary_type _Bt, size_t _I, typename _L, typename _R, typename... _Arg
 result::sequence_assert(const _L& _lhs, const _R& _rhs, _Args&&... _args) -> result& {
     if (!binary<_Bt, _L, _R>()(_lhs, _rhs)) {
         report();
-        std::cout << "  " << _assertion << test::to_string<CURLY>(_I, _I + 1) << test::to_string<PARENTHESES>(_lhs, _rhs) << std::endl;
+        std::cout << "  " << _assertion << test::to_string<ANGLE>(_I, _I + 1) << test::to_string<PARENTHESES>(_lhs, _rhs) << std::endl;
         ++_errors;
     }
     return sequence_assert<_Bt, _I + 1>(_rhs, std::forward<_Args>(_args)...);
