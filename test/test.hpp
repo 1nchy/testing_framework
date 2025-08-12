@@ -435,6 +435,7 @@ auto result::count() -> void {
     switch (_level) {
     case level::ERROR: { ++_errors; break; }
     case level::FATAL: { ++_fatals; break; }
+    default: {}
     }
     if (_level == level::FATAL) {
         throw fatal_exception();
