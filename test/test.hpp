@@ -556,6 +556,7 @@ int main(int _argc, char** _argv) {
                 test::subcase::end();
             } while (!test::subcase::done());
         }
+        return test::result::errors();
     }
     catch (const test::fatal_exception& _e) {
         return test::result::fatals();
@@ -572,7 +573,7 @@ int main(int _argc, char** _argv) {
     catch (...) {
         std::cerr << "unknown exception" << std::endl;
     }
-    return test::result::errors();
+    return EXIT_FAILURE;
 }
 
 #endif // _ICY_TESTING_FRAMEWORK_TEST_HPP_
